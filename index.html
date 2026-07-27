@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desktop Farm Pets 🐴 — 바탕화면 픽셀 목장</title>
+<meta name="description" content="바탕화면을 뛰어다니며 풀 뜯고 응가하는 픽셀 말. 설치 없이 PowerShell 하나로.">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABY0lEQVR4nNWWMY6DMBBFv1fUiIIe5QDpOECKPQDVFnS5wB4mF6CjSJUDbMEB6DhARO/C8gVIsXI0cWzsZMfZ3S8hkBiLx5/xl4H/orLIl7LIF/s5tYQP5rTfAQCabkBbVwCAfpwhlXau4dJbqOC03+FjuwEAtHWFssiXz/dtMrfugIw7TTc4F7R1hX6ckQrqBoi2ytzXlAIqc8FQNd0AqbRwvTdOHb4mtrnKfDAGhOtDsbpp2XE64zid74p87hlxtu7qgJ0z1B0XkAHvxxltXYGrbVeHpNKCXqGFNAo4d13UX4VaBsAbE1RSaWHAfY6yAcWIpr4PKpjUnKKp71MQiMudWL3UIVuujfByoKYbViMiCCSVFnQH+cLTlqsuJv2ztZcW1AJ8D2bTDejHGWunAlprnmMUBWSgfKdG118/e8L8laFeS/Vohzj1o6G2RQc1NNyP1D4NlFp/DuihMwzHLgvl0AV0KsA5iDtgcAAAAABJRU5ErkJggg==">
+<style>
+  @font-face {
+    font-family: 'Galmuri11';
+    src: url('https://cdn.jsdelivr.net/npm/galmuri@latest/dist/Galmuri11.woff2') format('woff2');
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Galmuri11';
+    font-weight: bold;
+    src: url('https://cdn.jsdelivr.net/npm/galmuri@latest/dist/Galmuri11-Bold.woff2') format('woff2');
+    font-display: swap;
+  }
+  :root {
+    --sky:   #FDEEDC;   /* 복숭아빛 하늘 */
+    --grass: #60A848;   /* 스프라이트와 같은 잔디색 */
+    --grass-deep: #3E7A32;
+    --ink:   #36261A;   /* 스프라이트 외곽선색 */
+    --coat:  #C4714E;   /* 말 털색 */
+    --paper: #FFFAF0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Galmuri11', 'DotGothic16', monospace;
+    background: var(--sky);
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .px { image-rendering: pixelated; }
+
+  /* ---------- 상단 콘텐츠 ---------- */
+  .stage-copy {
+    position: relative;
+    z-index: 2;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: clamp(40px, 12vh, 110px) 24px 0;
+    text-align: center;
+  }
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 3px;
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-weight: bold;
+    font-size: clamp(30px, 6vw, 46px);
+    line-height: 1.2;
+    margin-bottom: 14px;
+  }
+  .lede {
+    font-size: 15px;
+    line-height: 1.8;
+    margin-bottom: 28px;
+  }
+  .btn-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px; }
+  .btn {
+    display: inline-block;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 14px;
+    text-decoration: none;
+    padding: 12px 18px;
+    border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    background: var(--coat);
+    color: #fff;
+    transition: transform .05s, box-shadow .05s;
+  }
+  .btn.ghost { background: var(--paper); color: var(--ink); }
+  .btn:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+  .btn:active { transform: translate(4px, 4px); box-shadow: 0 0 0 var(--ink); }
+  .btn:focus-visible { outline: 3px dashed var(--ink); outline-offset: 3px; }
+  .hint { font-size: 12px; line-height: 2; opacity: .75; }
+  .hint b { font-weight: bold; }
+
+  /* ---------- 하늘 ---------- */
+  .cloud { position: absolute; z-index: 1; opacity: .9; }
+  #cloud1 { width: 120px; top: 12%;  animation: drift 90s linear infinite; }
+  #cloud2 { width: 80px;  top: 30%;  animation: drift 140s linear infinite; animation-delay: -60s; }
+  @keyframes drift {
+    from { left: -140px; }
+    to   { left: 100%; }
+  }
+
+  /* ---------- 잔디 무대 ---------- */
+  .pasture {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    height: 52px;
+    background: var(--grass);
+    border-top: 4px solid var(--grass-deep);
+    z-index: 3;
+  }
+  .pasture::before {   /* 잔디 결 */
+    content: '';
+    position: absolute;
+    top: -10px; left: 0; right: 0; height: 6px;
+    background:
+      repeating-linear-gradient(90deg,
+        transparent 0 14px, var(--grass) 14px 18px,
+        transparent 18px 34px, var(--grass-deep) 34px 38px, transparent 38px 52px);
+  }
+
+  /* ---------- 말 ---------- */
+  #horse {
+    position: fixed;
+    z-index: 5;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #horse img { display: block; width: 144px; height: 104px; }
+  #bubble {
+    position: absolute;
+    left: 50%;
+    top: -34px;
+    transform: translateX(-50%);
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    padding: 5px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+    visibility: hidden;
+  }
+  #bubble .heart { color: crimson; }
+  .pile {
+    position: fixed;
+    z-index: 4;
+    width: 40px; height: 25px;
+    cursor: pointer;
+    transition: opacity .4s;
+  }
+  footer {
+    position: fixed;
+    z-index: 2;
+    left: 0; right: 0; bottom: 60px;
+    text-align: center;
+    font-size: 11px;
+    opacity: .55;
+  }
+  @media (max-width: 520px) {
+    #horse img { width: 108px; height: 78px; }
+    footer { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cloud { animation: none !important; left: 10%; }
+  }
+</style>
+</head>
+<body>
+
+<img id="cloud1" class="cloud px" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAFCAYAAACaTbYsAAAAOklEQVR4nJ2MsQ0AMAjDcP9/jDO4JJ2oEANV6y2KbKwgSXUD2MA5u9gj9c8oN3EK8iMmC8DC36xwA9he8Rdff4TlIgAAAABJRU5ErkJggg==">
+<img id="cloud2" class="cloud px" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAECAYAAAC3OK7NAAAAMUlEQVR4nIXKwQkAIAwEwYz9N5YyrCS+FBHFfd3BiK2qqv3D2jdwBn5o1iB6vkXPgAGrqg9eCTCS5gAAAABJRU5ErkJggg==">
+
+<main class="stage-copy">
+  <p class="eyebrow">🍑 PEACHCODE FARM</p>
+  <h1>Desktop Farm Pets</h1>
+  <p class="lede">바탕화면을 뛰어다니며 풀 뜯고 응가하는 픽셀 말.<br>
+  Windows 내장 PowerShell 하나로 돌아가서, 설치할 게 없어요.</p>
+  <div class="btn-row">
+    <a class="btn" id="btn-download" href="#">Windows용 다운로드</a>
+    <a class="btn ghost" id="btn-repo" href="#">GitHub 저장소</a>
+  </div>
+  <p class="hint">
+    아래 잔디밭이 데모예요 — <b>말을 클릭</b>하면 점프,<br>
+    말이 흔적을 남기면 <b>응가를 클릭</b>해서 치워주세요.
+  </p>
+</main>
+
+<footer>PowerShell 원본을 브라우저로 그대로 포팅했어요 · 동작 하나하나가 실제 위젯과 같습니다</footer>
+
+<div class="pasture"></div>
+
+<div id="horse">
+  <div id="bubble"><span id="bubble-text"></span><span class="heart" id="bubble-heart"></span></div>
+  <img id="horse-img" class="px" alt="픽셀 말" src="">
+</div>
+
+<script>
+// ===== 여기 한 줄만 본인 저장소 주소로 바꿔주세요 =====
+const REPO_URL = 'https://github.com/chewrispy/pet';
+// ======================================================
+
+document.getElementById('btn-repo').href = REPO_URL;
+document.getElementById('btn-download').href = REPO_URL + '/archive/refs/heads/main.zip';
+
+// ---------- 스프라이트 (데스크탑판과 동일한 프레임) ----------
+const B64 = {
+  run1: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABi0lEQVR4nNWXsa2DMBCGf56oEQU9ygB0DECRAahS0LFAhnkL0FGkYoBXMAAdA0T0FMgLkOrQYWxsEhPp/VKUIJ/Nl9++OwD+i6IwmKMwmOXfZ8vTwTRlBgDIqxZFGgMA6m7AOAnlHFf6MQU0ZYZbcgEAFGmMKAzm+zU5za0NELmTV61yQpHGqLsBZ0GtgPhW0feezoDyVTBcedVinISnGienfv96Z+fK18EQiKsb2Wq1ZY/+iUf/3ATp3CO53LrFAbnOcHdUQARedwOKNIarbVscGifh8Y9pIi8FLrPO6l+ZtgyAtkxwjZPwOLjKVWdANiJoqvwqsK8CcTCdW8bW4RqGiztDcEagsyVDfR1IVXA/OkNUfyjtdVLF2VR/f29QFk/tW3LZTXV6Yqi7Ybm20SEgAEuj5ddyjDx+5GnTOss+abbjJLy8atGU2aZFHQbSSdWEj4zrZAXEF4/CYKb+pXNsnIRHTZc78i7k6ub3a7J646A3EJP1qjjVerLeOtQu42TtTjJl01HZrPcCQ772jgRv1j0AAAAASUVORK5CYII=',
+  run2: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABaklEQVR4nNWWMY6DMBBFPytqREGPcoB0HCDF1iuqFHS5QKS9yl6AjiJVDrAFRUo6DhDRUyAuQKqJJs44thU7u/kSAslj+/mPPQZ4F2VpsmRpsqjfoRXpYI67DQCgrFtURQ4AaLoB4zSLfXzpwxRw3G2wXa8AAFWRI0uTZf+5DubWHRC5U9at2KEqcjTdgFBQN0A8VfR+pBBQsQTDVdYtxmmOpHZy6ue397avYh0MgfiayFY3KTv0Zxz6812Qzj2Sz9RdHVDrDHdHAiLwphtQFTl8pe3q0DjNEX9MHXkp8HnqrFZlShkAbZngGqc54uCSq96AbETQVPklsJcCcTCdW8arwzcMF3eG4IxAoaVCvRxIKrhP7SGqP3TsdZLivFZ/+kk7fX8t0rf0SLGmeWJTAIkuWF2btADbsbn+fFOregpIuohd2iU5A/FJmm54GMvbbeGs95Aq02lR/xZsx/13e8ipJvCVutQTl34XWU/czQrlyNYAAAAASUVORK5CYII=',
+  run3: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABb0lEQVR4nOWWMW6DMBSGf1eZEQM7ygHYOAADc8XUgY0LIOUqvQAbQyYO0IGhIxsHiNg9IC5ApxcZ5zm2GpOo6idZgJ6Nf/6Hnw38FaIwWKMwWPX7vREmMV2VAQCKpkeZxgCAdpgg54Ud44s3W4euyvCRHAEAZRojCoO1zpPd3LoRRO4UTc8OKNMY7TBhL1EbQWqq6HqPPUQdODEqRdNDzovg4uTU59fo7b86mMSQEF8TubJJ2Xm84DxebjqZ3CN8pu7qgF5nVHc4QSS8HSaUaQxfabs6JOdFqM02UC0FPled01fZUgbAWCZU5LwIEm5y1JsgF0g0VX5OlLVS+6SrMnRVhnaYAPCLwSrIlzuuPNUhFUqX7tLTBdkKrlWQnBehriBT8dTh+uliTC45QYc0at+n983VJca9t86TlRqgbK429Mptit+LcehL/2U/tXcoDXWebM7e9KzHXHnYIdpcuYl/cwZ/eIc2OfCKs9T/4AftmeOdapvcmAAAAABJRU5ErkJggg==',
+  standA: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABY0lEQVR4nNWWMY6DMBBFv1fUiIIe5QDpOECKPQDVFnS5wB4mF6CjSJUDbMEB6DhARO/C8gVIsXI0cWzsZMfZ3S8hkBiLx5/xl4H/orLIl7LIF/s5tYQP5rTfAQCabkBbVwCAfpwhlXau4dJbqOC03+FjuwEAtHWFssiXz/dtMrfugIw7TTc4F7R1hX6ckQrqBoi2ytzXlAIqc8FQNd0AqbRwvTdOHb4mtrnKfDAGhOtDsbpp2XE64zid74p87hlxtu7qgJ0z1B0XkAHvxxltXYGrbVeHpNKCXqGFNAo4d13UX4VaBsAbE1RSaWHAfY6yAcWIpr4PKpjUnKKp71MQiMudWL3UIVuujfByoKYbViMiCCSVFnQH+cLTlqsuJv2ztZcW1AJ8D2bTDejHGWunAlprnmMUBWSgfKdG118/e8L8laFeS/Vohzj1o6G2RQc1NNyP1D4NlFp/DuihMwzHLgvl0AV0KsA5iDtgcAAAAABJRU5ErkJggg==',
+  standB: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABaklEQVR4nNWWMW6DMBSGf6rMiIEd9QBsHIAhc8WUgY0LROpVegE2hkwcoANDRzYOELF7sLgAnV7kOM99TmXS5pcskHg2H//zexh4FqVJvKZJvNr3WytywfRNCQCo2gF1kQEAunGG0gs7J5RepIC+KXHIXwEAdZEhTeL1uM83c+sGiNyp2oGdUBcZunHGVlBXQGaq6PqTtoDacTCmqnaA0kvEPSenPj6nYPtq54IhkFAv8tVVyk7TGafpfBPkco8UMnUXB+w+Y7rDARF4N86oiwyh0nZxSOklMoc00WwFIavO66uklAFwtglTSi8RgbscDQbkI4Kmzs9BiZ06pPqmRN+U6MYZAF8MIlAod3z1UIdMUbpslx4OJDVcEUjpJTIryNU8bXFxNozLJS/RIe3r/W3l7rnBxdrrHvf5SgMwfq6S6AfresZ9gM+6dun/2aZ26fmBzI0qbe57Yn8NtLX+HdBdZ5gQVSYdbb4BhALYMXNKzk8AAAAASUVORK5CYII=',
+  grazeA: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABJklEQVR4nO2UMQ6CQBBF/xJrQkFvPACdB7CwsKSisNILeBgvQEeMlQew4AB0HsDQUxAusBZmN+M6y0IUqn0JgYU/w2d2BsDj8Xg8nlGIIaI4CuXtuOnVpHnpzNO0nThtEwkA5/uDfbfT0GmbyKKq4TI0hDQvsV8v9ZozZTX0TyMm18fTaiiY24yLD0NxFMo5zah+Yg3FUSj36yWmNpPmpbWhAWBBF1myQpasPoKbthN0ytT+Ux0Hp1P5+uIEwI+1GRxH4Vd5x0Lz2cZfb5nrP6KSUePqumk7YR6cdshHaUM0eEhpf4FrZsXC9mBK+po6MPtn6uq40BVSU+GC6lwxY7SKoGk7keYliqpGUdW6OofLTtLzbJgvPlx2krsHvEefO7i8Y7SUF4mWuptmbewRAAAAAElFTkSuQmCC',
+  grazeB: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABHUlEQVR4nO2UsQ3CMBBFzyi15cJ9xADuGICCgjJVilSwAMOwQDqEqBiAIgPQMQCidxFlAVPZOsI5jgWBxk+yZCv/Lj/nuwAkEolEIhEFGyOSgpvzdjmoKeommEe3HdutlAEA2F9u5LuDhnYrZQ7XB4QMjaGoG6gWuTtTpryGvmmkz+l29xqa/dpMiBdDUnDzSzO2n0hDUnBTLXKY2kxRN96GBgDI8KFUcyjV/CVYtx3DU2bvH+soKJ3NNxTHAOix7gdLwd/KGwvO5xt/d2Wh/4hNho3bvW471l+UdsxHOUM4eExpP4FqZkvmezAlQ0096/fP1NUJ4SpkpyIE1oViYrTOkG47VtSNu9N/VsexOa6N74z3UnBDLSpnjBbzBIrtq2s/uDK/AAAAAElFTkSuQmCC',
+  poopA: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABYklEQVR4nO2WMW6DQBBFPxE1oqBHPoA7DkCROqJyQccFIvkquQAdhSsOkIIiJR0HsOi3QFyAVCONYdYDzmIlUr60AonZ5e2f2QHgrygKgykKg2l+v7c8G0xdpACArGyQJzEAoGp7mGEU57jSixZQFylOxwMAIE9iRGEwvb8ed3NrAUTuZGUjTsiTGFXbYy+oGyCeKrre0x5QvgTDlZUNzDB60nNy6uOzc1ZXvg2GQFy9SBJ3mDZ1k7JLd8Wluy4m2tyTFv4JDMCO/bzPcHckIAKv2h55EmNL2mwwAHPIDKPHh7YobwWPnjppE6t2paUMgLVNcJlh9Ajc5qgzoDUi6HsZUDu1S9VFirpIF/XKpQK5cmetnurQGj0dSGu4KpAZRo+fIFvznEuKc9r96Sft6/w2SffSkGK19/haAIk+sLZn0gbWrs31X9SaNgPxQtWKe0vsw0B769cBbeoJLk6Z1oe+AWp805cuROOIAAAAAElFTkSuQmCC',
+  poopB: 'iVBORw0KGgoAAAANSUhEUgAAACQAAAAaCAYAAADfcP5FAAABcklEQVR4nO2WsWqEQBCGf8PVYmEvPsB1PoBwqYNVCjuLawN5lbQp7Cyu8gESsEhp5wOIvYX4AptqYU5nHb2sRwL5QU64Wf32n50fgb8i33OV77lqer+3HBNMmcUAgCSvkEYBAKCoO/TDyK6xpQepoMxiPB9DAEAaBfA9V708Hndzawak3Unyil2QRgGKusNeUFdAtFX6d0l7QB04GKokr9APo8P9r516+2isnauDCUaD2HoRJ+qw3tRVyy5Ni0vTzhaa3OMe/BMYgIz9NGeoOxyQBi/qDmkUYEvbTDAAcagfRode0kNpFNw6ddwmVu1KahkAY0xQ9cPoaHCTo9aA1khDL3VATGqbKrMYZRbPziuVCGTLnbW6q0NrdHcgKXBFoH4YHTpBpvCciquzmv76I+3r9Ulx99zF1UrvWd2ypZ1NQ1Vy4XwKb5+yPfT+2f6OHNI6n0JlcmkzED2o0uHmaikIB/WfQ5I2ZYJpbLmp2lJL9Q0s8OePskCXqQAAAABJRU5ErkJggg==',
+  pile: 'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAFCAYAAAB4ka1VAAAARklEQVR4nGNgQAJmalL/zdSk/iOLsSBL6suyQ3lS/0/desbIwMDAwIQpycCgL8vOADOJEV0SGVx8/JOBEWYCNgWnbj1jBAAtYBRk5cgKRQAAAABJRU5ErkJggg==',
+};
+const SRC = {};
+for (const k in B64) SRC[k] = 'data:image/png;base64,' + B64[k];
+const runCycle = ['run1', 'run2', 'run3', 'run2'];
+
+// ---------- 요소 ----------
+const horseEl = document.getElementById('horse');
+const horseImg = document.getElementById('horse-img');
+const bubble = document.getElementById('bubble');
+const bubbleText = document.getElementById('bubble-text');
+const bubbleHeart = document.getElementById('bubble-heart');
+
+// ---------- 상태 (PowerShell판 상태 머신 이식) ----------
+const TICK_MS = 30;
+const GRASS_H = 52;
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let W = () => horseImg.clientWidth || 144;
+let maxX = () => window.innerWidth - W();
+let groundY = () => window.innerHeight - GRASS_H - (horseImg.clientHeight || 104) + 8; // 발굽이 잔디에 살짝 묻히게
+
+let x = Math.max(0, (window.innerWidth - 144) / 2);
+let dir = -1;
+let targetX = Math.max(0, x - 400);
+let state = reduced ? 'idle' : 'run';
+let stateTicks = reduced ? 1e9 : 150;
+let jumpTicks = 0, bubbleTicks = 0, tick = 0;
+let piles = [];
+
+function setBubble(text, heart, ticks) {
+  bubbleText.textContent = text;
+  bubbleHeart.textContent = heart ? ' \u2665' : '';
+  bubble.style.visibility = 'visible';
+  bubbleTicks = ticks;
+}
+
+function dropPile(px) {
+  const el = document.createElement('img');
+  el.className = 'pile px';
+  el.src = SRC.pile;
+  el.title = '클릭해서 치우기';
+  el.style.left = Math.min(Math.max(px, 0), window.innerWidth - 40) + 'px';
+  el.style.top = (window.innerHeight - GRASS_H - 14) + 'px';
+  el.addEventListener('click', () => el.remove());
+  document.body.appendChild(el);
+  piles.push({ el, ttl: 700 });
+  if (piles.length > 4) { const old = piles.shift(); old.el.remove(); }
+}
+
+function transition() {
+  const toPoop = (state === 'graze' && Math.random() < 0.35) || Math.random() >= 0.87;
+  if (toPoop && !reduced) {
+    state = 'poop'; stateTicks = 80;
+    setBubble('뿌지직...', false, 80);
+  } else {
+    const r = Math.random();
+    if (r < 0.42 && !reduced) {
+      state = 'run';
+      targetX = Math.random() * maxX();
+      dir = targetX > x ? 1 : -1;
+      stateTicks = 2000;
+    } else if (r < 0.62) {
+      state = 'idle'; stateTicks = 60 + Math.floor(Math.random() * 120);
+    } else {
+      state = 'graze'; stateTicks = 160 + Math.floor(Math.random() * 160);
+    }
+  }
+}
+
+function loop() {
+  tick++;
+  const gY = groundY();
+
+  if (jumpTicks > 0) {
+    jumpTicks--;
+    const p = 1 - jumpTicks / 16;
+    horseEl.style.top = (gY - 60 * Math.sin(Math.PI * p)) + 'px';
+    horseImg.src = SRC.run1;
+  } else {
+    stateTicks--;
+    if (stateTicks <= 0) transition();
+
+    if (state === 'run') {
+      x += 3.4 * dir;
+      if (x < 0) { x = 0; dir = 1; }
+      if (x > maxX()) { x = maxX(); dir = -1; }
+      if (Math.abs(x - targetX) < 6) stateTicks = 1;
+      horseEl.style.left = x + 'px';
+      horseEl.style.top = gY + 'px';
+      horseImg.src = SRC[runCycle[Math.floor(tick / 3) % 4]];
+      horseImg.style.transform = dir > 0 ? 'scaleX(-1)' : '';
+    } else if (state === 'idle') {
+      horseEl.style.top = gY + 'px';
+      horseImg.src = (tick % 45 < 8) ? SRC.standB : SRC.standA;
+      if (bubbleTicks <= 0 && Math.random() < 0.006) setBubble('히히힝~!', false, 45);
+    } else if (state === 'graze') {
+      horseEl.style.top = gY + 'px';
+      horseImg.src = (tick % 16 < 8) ? SRC.grazeA : SRC.grazeB;
+    } else if (state === 'poop') {
+      horseEl.style.top = gY + 'px';
+      horseImg.src = stateTicks > 40 ? SRC.poopA : SRC.poopB;
+      if (stateTicks <= 1) {
+        const flipped = horseImg.style.transform !== '';
+        dropPile(flipped ? x + 2 : x + W() - 42);
+        dir = -dir;
+        targetX = dir > 0 ? maxX() : 0;
+        state = 'run'; stateTicks = 2000;
+      }
+    }
+  }
+
+  // 응가 수명 관리
+  for (let i = piles.length - 1; i >= 0; i--) {
+    const p = piles[i];
+    p.ttl--;
+    if (p.ttl <= 0 || !p.el.isConnected) { p.el.remove(); piles.splice(i, 1); }
+    else if (p.ttl < 60) p.el.style.opacity = p.ttl / 60;
+  }
+
+  // 말풍선 타이머
+  if (bubbleTicks > 0 && --bubbleTicks === 0) bubble.style.visibility = 'hidden';
+}
+
+horseEl.addEventListener('click', () => {
+  if (jumpTicks <= 0 && state !== 'poop') jumpTicks = 16;
+  if (state !== 'poop') setBubble('히힝~', true, 35);
+});
+
+window.addEventListener('resize', () => { x = Math.min(x, maxX()); });
+
+// 시작
+horseImg.src = SRC.standA;
+horseImg.onload = () => {
+  horseEl.style.left = x + 'px';
+  horseEl.style.top = groundY() + 'px';
+};
+setInterval(loop, TICK_MS);
+</script>
+</body>
+</html>

@@ -169,7 +169,6 @@
   Windows 내장 PowerShell 하나로 돌아가서, 설치할 게 없어요.</p>
   <div class="btn-row">
     <a class="btn" id="btn-download" href="#">Windows용 다운로드</a>
-    <a class="btn ghost" id="btn-repo" href="#">GitHub 저장소</a>
   </div>
   <p class="hint">
     아래 잔디밭이 데모예요 — <b>말을 클릭</b>하면 점프,<br>
@@ -177,7 +176,7 @@
   </p>
 </main>
 
-<footer>PowerShell 원본을 브라우저로 그대로 포팅했어요 · 동작 하나하나가 실제 위젯과 같습니다</footer>
+<footer>PowerShell 원본을 브라우저로 그대로 포팅했어요 · <a href="https://github.com/chewrispy/pet" style="color:inherit">소스 보기</a></footer>
 
 <div class="pasture"></div>
 
@@ -191,8 +190,7 @@
 const REPO_URL = 'https://github.com/chewrispy/pet';
 // ======================================================
 
-document.getElementById('btn-repo').href = REPO_URL;
-document.getElementById('btn-download').href = REPO_URL + '/archive/refs/heads/main.zip';
+document.getElementById('btn-download').href = REPO_URL + '/raw/main/desktop-farm-pets-win.zip';
 
 // ---------- 스프라이트 (데스크탑판과 동일한 프레임) ----------
 const B64 = {
